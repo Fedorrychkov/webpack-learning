@@ -1,4 +1,4 @@
-const {} = require('tapable');
+const { SyncBailHook, AsyncSeriesWaterfallHook } = require('tapable');
 const assert = require('node:assert');
 
 class Car {
@@ -8,9 +8,9 @@ class Car {
 		this.fuelAmount;
 
 		this.hooks = {
-			accelerate: null,
-			paint: null,
-			refuel: null
+			accelerate: new SyncBailHook(["newSpeed"]),
+			paint: new AsyncSeriesWaterfallHook(['newPaint']),
+			refuel: new AsyncSeriesWaterfallHook(['newRefuel'])
 		}
 	}
 
@@ -48,10 +48,23 @@ const car = new Car();
 
 // Plugins here
 
-//
+car.hooks.accelerate.tap(
+	"plugin",
+	(newSpeed) => newSpeed + 150
+);
 
+car.hooks.paint.tapAsync('Paint', (color, cb) => {
+	cb(null, color + 'grey');
+});
+
+car.hooks.refuel.tapAsync('Refuel', (color, cb) => {
+	cb('error');
+});
+
+//
 car.accelerate(100);
 assert.equal(car.speed, 250);
+
 
 car.paint('white', () => {
 	assert.equal(car.color, 'whitegrey');
